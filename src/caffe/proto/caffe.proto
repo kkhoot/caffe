@@ -481,9 +481,12 @@ message BatchNormParameter {
   // How much does the moving average decay each iteration?
   // Used when avg_type = EXPONENTIAL
   optional float moving_average_fraction = 3 [default = .999];
+  // How many iterations to use to make initial moving average value?
+  // Used when avg_type = EXPONENTIAL
+  optional int32 init_iterations = 4 [default = 100];
   // Small value to add to the variance estimate so that we don't divide by
   // zero.
-  optional float eps = 4 [default = 1e-5];
+  optional float eps = 5 [default = 1e-5];
 }
 
 message ContrastiveLossParameter {

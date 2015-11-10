@@ -60,7 +60,8 @@ void BatchNormLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
         variance_.mutable_gpu_data());  // E((X_EX)^2)
 
     // compute and save moving average
-    if (avg_type_ == BatchNormParameter_AvgType_EXPONENTIAL) {
+    if (init_iterations_ < this->blobs_[2]->cpu_data()[0] ||
+        avg_type_ == BatchNormParameter_AvgType_EXPONENTIAL) {
       Dtype scale_factor = this->blobs_[2]->cpu_data()[0] == 0 ?
           1 : 1 - moving_average_fraction_;
       caffe_gpu_axpby(mean_.count(), scale_factor,

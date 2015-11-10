@@ -13,6 +13,7 @@ void BatchNormLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   moving_average_fraction_ = param.moving_average_fraction();
   use_global_stats_ = this->phase_ == TEST;
   avg_type_ = param.avg_type();
+  init_iterations_ = param.init_iterations();
   if (param.has_use_global_stats())
     use_global_stats_ = param.use_global_stats();
   if (bottom[0]->num_axes() == 1)
@@ -125,7 +126,8 @@ void BatchNormLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
         variance_.mutable_cpu_data());  // E((X_EX)^2)
 
     // compute and save moving average
-    if (avg_type_ == BatchNormParameter_AvgType_EXPONENTIAL) {
+    if (init_iterations_ < this->blobs_[2]->cpu_data()[0] ||
+        avg_type_ == BatchNormParameter_AvgType_EXPONENTIAL) {
       Dtype scale_factor = this->blobs_[2]->cpu_data()[0] == 0 ?
           1 : 1 - moving_average_fraction_;
       caffe_cpu_axpby(mean_.count(), scale_factor,
