@@ -129,6 +129,7 @@ class BatchNormLayer : public Layer<Dtype> {
 
   Blob<Dtype> mean_, variance_, temp_, x_norm_;
   bool use_global_stats_;
+  BatchNormParameter_AvgType avg_type_;
   Dtype moving_average_fraction_;
   int channels_;
   Dtype eps_;

@@ -12,6 +12,7 @@ void BatchNormLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   BatchNormParameter param = this->layer_param_.batch_norm_param();
   moving_average_fraction_ = param.moving_average_fraction();
   use_global_stats_ = this->phase_ == TEST;
+  avg_type_ = param.avg_type();
   if (param.has_use_global_stats())
     use_global_stats_ = param.use_global_stats();
   if (bottom[0]->num_axes() == 1)
@@ -124,14 +125,25 @@ void BatchNormLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
         variance_.mutable_cpu_data());  // E((X_EX)^2)
 
     // compute and save moving average
-    Dtype scale_factor = this->blobs_[2]->cpu_data()[0] == 0 ?
-        1 : 1 - moving_average_fraction_;
-    caffe_cpu_axpby(mean_.count(), scale_factor,
-        mean_.cpu_data(), moving_average_fraction_,
-        this->blobs_[0]->mutable_cpu_data());
-    caffe_cpu_axpby(variance_.count(), scale_factor,
-        variance_.cpu_data(), moving_average_fraction_,
-        this->blobs_[1]->mutable_cpu_data());
+    if (avg_type_ == BatchNormParameter_AvgType_EXPONENTIAL) {
+      Dtype scale_factor = this->blobs_[2]->cpu_data()[0] == 0 ?
+          1 : 1 - moving_average_fraction_;
+      caffe_cpu_axpby(mean_.count(), scale_factor,
+          mean_.cpu_data(), moving_average_fraction_,
+          this->blobs_[0]->mutable_cpu_data());
+      caffe_cpu_axpby(variance_.count(), scale_factor,
+          variance_.cpu_data(), moving_average_fraction_,
+          this->blobs_[1]->mutable_cpu_data());
+    } else {  // CUMULATIVE
+      caffe_cpu_axpby(mean_.count(), Dtype(1), mean_.cpu_data(),
+          this->blobs_[2]->cpu_data()[0], this->blobs_[0]->mutable_cpu_data());
+      caffe_cpu_axpby(mean_.count(), Dtype(1), variance_.cpu_data(),
+          this->blobs_[2]->cpu_data()[0], this->blobs_[1]->mutable_cpu_data());
+      caffe_cpu_scale(mean_.count(), 1/(this->blobs_[2]->cpu_data()[0]+1),
+          this->blobs_[0]->cpu_data(), this->blobs_[0]->mutable_cpu_data());
+      caffe_cpu_scale(mean_.count(), 1/(this->blobs_[2]->cpu_data()[0]+1),
+          this->blobs_[1]->cpu_data(), this->blobs_[1]->mutable_cpu_data());
+    }
     this->blobs_[2]->mutable_cpu_data()[0] += 1;
   }
 

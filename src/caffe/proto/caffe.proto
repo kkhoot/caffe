@@ -472,11 +472,18 @@ message BatchNormParameter {
   // true, use those accumulated values instead of computing mean/variance
   // across the batch.
   optional bool use_global_stats = 1;
+  // type of movinf average
+  enum AvgType {
+    EXPONENTIAL = 0;
+    CUMULATIVE = 1;
+  }
+  optional AvgType avg_type = 2 [default = EXPONENTIAL];
   // How much does the moving average decay each iteration?
-  optional float moving_average_fraction = 2 [default = .999];
+  // Used when avg_type = EXPONENTIAL
+  optional float moving_average_fraction = 3 [default = .999];
   // Small value to add to the variance estimate so that we don't divide by
   // zero.
-  optional float eps = 3 [default = 1e-5];
+  optional float eps = 4 [default = 1e-5];
 }
 
 message ContrastiveLossParameter {

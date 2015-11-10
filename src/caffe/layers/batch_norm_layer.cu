@@ -60,14 +60,25 @@ void BatchNormLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
         variance_.mutable_gpu_data());  // E((X_EX)^2)
 
     // compute and save moving average
-    Dtype scale_factor = this->blobs_[2]->cpu_data()[0] == 0 ?
-        1 : 1 - moving_average_fraction_;
-    caffe_gpu_axpby(mean_.count(), scale_factor,
-        mean_.gpu_data(), moving_average_fraction_,
-        this->blobs_[0]->mutable_gpu_data());
-    caffe_gpu_axpby(variance_.count(), scale_factor,
-        variance_.gpu_data(), moving_average_fraction_,
-        this->blobs_[1]->mutable_gpu_data());
+    if (avg_type_ == BatchNormParameter_AvgType_EXPONENTIAL) {
+      Dtype scale_factor = this->blobs_[2]->cpu_data()[0] == 0 ?
+          1 : 1 - moving_average_fraction_;
+      caffe_gpu_axpby(mean_.count(), scale_factor,
+          mean_.gpu_data(), moving_average_fraction_,
+          this->blobs_[0]->mutable_gpu_data());
+      caffe_gpu_axpby(variance_.count(), scale_factor,
+          variance_.gpu_data(), moving_average_fraction_,
+          this->blobs_[1]->mutable_gpu_data());
+    } else {  // CUMULATIVE
+      caffe_gpu_axpby(mean_.count(), Dtype(1), mean_.gpu_data(),
+          this->blobs_[2]->cpu_data()[0], this->blobs_[0]->mutable_gpu_data());
+      caffe_gpu_axpby(mean_.count(), Dtype(1), variance_.gpu_data(),
+          this->blobs_[2]->cpu_data()[0], this->blobs_[1]->mutable_gpu_data());
+      caffe_gpu_scale(mean_.count(), 1/(this->blobs_[2]->cpu_data()[0]+1),
+          this->blobs_[0]->gpu_data(), this->blobs_[0]->mutable_gpu_data());
+      caffe_gpu_scale(mean_.count(), 1/(this->blobs_[2]->cpu_data()[0]+1),
+          this->blobs_[1]->gpu_data(), this->blobs_[1]->mutable_gpu_data());
+    }
     this->blobs_[2]->mutable_cpu_data()[0] += 1;
   }
 
